@@ -42,7 +42,7 @@ const DashboardLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   const selectedCompany = JSON.parse(localStorage.getItem("selectedCompany") || "{}");
 
   const handleLogout = () => {
@@ -53,7 +53,7 @@ const DashboardLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-background">
       {/* Top Bar */}
-      <header className="sticky top-0 z-40 bg-card border-b border-border">
+      <header className="sticky top-0 bg-card border-b border-border">
         <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-4">
             <Button
@@ -74,12 +74,63 @@ const DashboardLayout = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5" />
-              <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs">
-                3
-              </Badge>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="w-5 h-5" />
+                  <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs">
+                    3
+                  </Badge>
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                align="end"
+                className="z-[9999] w-72 bg-gray-50 border border-border shadow-xl rounded-xl p-2"
+              >
+                <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1.5">
+                  Notifications
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                {/* Dummy notifications */}
+                <DropdownMenuItem className="flex items-start gap-3 cursor-pointer hover:bg-muted px-3 py-2 rounded-md transition-colors">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-1.5"></div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      New sales report available
+                    </p>
+                    <p className="text-xs text-muted-foreground">2 minutes ago</p>
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem className="flex items-start gap-3 cursor-pointer hover:bg-muted px-3 py-2 rounded-md transition-colors">
+                  <div className="w-2 h-2 bg-success rounded-full mt-1.5"></div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Inventory updated successfully
+                    </p>
+                    <p className="text-xs text-muted-foreground">10 minutes ago</p>
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem className="flex items-start gap-3 cursor-pointer hover:bg-muted px-3 py-2 rounded-md transition-colors">
+                  <div className="w-2 h-2 bg-destructive rounded-full mt-1.5"></div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Failed to sync with Toulouse branch
+                    </p>
+                    <p className="text-xs text-muted-foreground">30 minutes ago</p>
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-center text-sm text-primary hover:bg-muted/50 cursor-pointer rounded-md">
+                  View all notifications
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -87,18 +138,30 @@ const DashboardLayout = ({ children }) => {
                   <User className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuContent
+                align="end"
+                className="z-[9999] bg-card/90 backdrop-blur-md border border-border shadow-lg rounded-lg p-1"
+              >
+                <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1.5">
+                  My Account
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/company-selection")}>
-                  <Building2 className="w-4 h-4 mr-2" />
+                <DropdownMenuItem
+                  onClick={() => navigate('/company-selection')}
+                  className="flex items-center gap-2 hover:bg-muted hover:text-foreground px-3 py-2 rounded-md cursor-pointer"
+                >
+                  <Building2 className="w-4 h-4 text-primary" />
                   Switch Company
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="w-4 h-4 mr-2" />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 hover:bg-destructive hover:text-white px-3 py-2 rounded-md cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
+
             </DropdownMenu>
           </div>
         </div>
@@ -112,7 +175,7 @@ const DashboardLayout = ({ children }) => {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
-          <nav className="flex flex-col gap-1 p-4">
+          <nav className="flex flex-col gap-2 p-4">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
@@ -123,8 +186,8 @@ const DashboardLayout = ({ children }) => {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                      ? "bg-[#36BFFA] text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-ring"
                   )}
                 >
                   <item.icon className="w-5 h-5" />

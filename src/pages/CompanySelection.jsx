@@ -6,9 +6,15 @@ import { toast } from "sonner";
 
 const companies = [
   { id: 1, name: "Afaq Distribution", role: "Admin" },
-  { id: 2, name: "FBR Distribution", role: "Accountant" },
-  { id: 3, name: "Karachi Traders", role: "Manager" },
+  { id: 2, name: "Société Générale Imports", role: "Accountant" },
+  { id: 3, name: "Arfa Traders Paris", role: "Manager" },
+  { id: 4, name: "Bordeaux Logistics", role: "Supervisor" },
+  { id: 5, name: "Nice Merchandisers", role: "Sales Head" },
+  { id: 6, name: "Lyon Agro Distribution", role: "Finance Officer" },
+  { id: 7, name: "Toulouse Trading Co.", role: "Operations Manager" },
 ];
+
+
 
 const CompanySelection = () => {
   const navigate = useNavigate();
@@ -26,10 +32,10 @@ const CompanySelection = () => {
           <h1 className="text-3xl font-bold text-foreground mb-2">Select Company</h1>
           <p className="text-muted-foreground">Choose a company to access</p>
         </div>
-        
+
         <div className="grid md:grid-cols-2 gap-4">
           {companies.map((company) => (
-            <Card 
+            <Card
               key={company.id}
               className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 hover:border-primary"
               onClick={() => selectCompany(company)}
@@ -39,7 +45,16 @@ const CompanySelection = () => {
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
                     <Building2 className="w-6 h-6 text-primary" />
                   </div>
-                  <Badge variant={company.role === "Admin" ? "default" : "secondary"}>
+                  <Badge
+                    variant={
+                      company.role === "Admin" ? "success"
+                        : company.role === "Accountant" ? "destructive"
+                          : company.role === "Supervisor" ? "outline"
+                            : company.role === "Finance Officer" ? "default"
+                              : company.role === "Sales Head" ? "outline"
+                            : "accent"
+                    }
+                  >
                     {company.role}
                   </Badge>
                 </div>

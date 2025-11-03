@@ -1,4 +1,6 @@
-# Logs
+# ============================================
+# 🧰 Logs
+# ============================================
 logs
 *.log
 npm-debug.log*
@@ -7,18 +9,43 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# ============================================
+# ⚙️ Node & Environment
+# ============================================
+node_modules/
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+*.env
+
+# ============================================
+# 🧱 Build Output
+# ============================================
+dist/
+dist-ssr/
+.vite/
 *.local
 
-# Editor directories and files
+# ============================================
+# 🧑‍💻 Editor & System Files
+# ============================================
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+Thumbs.db
+
+# ============================================
+# 🔒 Optional Lock Files (uncomment if needed)
+# ============================================
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+# bun.lockb
