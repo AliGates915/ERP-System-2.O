@@ -16,7 +16,7 @@ const Sales = () => {
     setItems([...items, { id: Date.now(), name: "", qty: 0, rate: 0 }]);
   };
 
-  const removeItem = (id: number) => {
+  const removeItem = (id) => {
     setItems(items.filter((item) => item.id !== id));
   };
 
@@ -114,7 +114,7 @@ const Sales = () => {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Checkbox id="vat" checked={applyVAT} onCheckedChange={(checked) => setApplyVAT(checked as boolean)} />
+                <Checkbox id="vat" checked={applyVAT} onCheckedChange={(checked) => setApplyVAT(checked)} />
                 <label htmlFor="vat" className="text-sm font-medium cursor-pointer">
                   Apply VAT Margin (17%)
                 </label>

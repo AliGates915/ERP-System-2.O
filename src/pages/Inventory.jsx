@@ -17,13 +17,13 @@ const mockInventory = [
 const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [fifoData, setFifoData] = useState<any>(null);
+  const [fifoData, setFifoData] = useState(null);
 
   const filteredInventory = mockInventory.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleViewFifo = (item: typeof mockInventory[0]) => {
+  const handleViewFifo = (item) => {
     setFifoData({
       itemName: item.name,
       layers: [
@@ -159,7 +159,7 @@ const Inventory = () => {
                 <DialogTitle>FIFO Layers - {fifoData.itemName}</DialogTitle>
               </DialogHeader>
               <div className="space-y-2">
-                {fifoData.layers.map((layer: any) => (
+                {fifoData.layers.map((layer) => (
                   <Card key={layer.batchId}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-center">

@@ -13,7 +13,7 @@ const companies = [
 const CompanySelection = () => {
   const navigate = useNavigate();
 
-  const selectCompany = (company: typeof companies[0]) => {
+  const selectCompany = (company) => {
     toast.success(`Switched to ${company.name}`);
     localStorage.setItem("selectedCompany", JSON.stringify(company));
     navigate("/dashboard");
