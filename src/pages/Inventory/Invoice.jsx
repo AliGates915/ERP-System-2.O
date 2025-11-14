@@ -59,25 +59,17 @@ const Invoice = () => {
   const [invoiceNo, setInvoiceNo] = useState("");
   const [customerList, setCustomerList] = useState([]);
   const [customerLoading, setCustomerLoading] = useState(false);
+  const [itemsList, setItemsList] = useState([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeTab, setActiveTab] = useState("all"); // "all", "draft", "final"
-  const itemsPerPage = 8; // adjust per your need
+  const [status, setStatus] = useState("Draft");
+  const [activeTab, setActiveTab] = useState("all");
+  const itemsPerPage = 8;
 
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().split("T")[0]
   );
   const [sendingEmail, setSendingEmail] = useState(false);
-  const customers = [
-    { _id: "cust001", customerName: "John Doe" },
-    { _id: "cust002", customerName: "ABC Traders" },
-    { _id: "cust003", customerName: "XYZ Pvt Ltd" },
-  ];
-
-  const items = [
-    { _id: "item001", itemName: "Premium Vegetable Cooking Oil" },
-    { _id: "item002", itemName: "Office Chair" },
-    { _id: "item003", itemName: "Laptop Stand" },
-  ];
 
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -98,7 +90,6 @@ const Invoice = () => {
   // ---------------- FORM STATES ----------------
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [customerVAT, setCustomerVAT] = useState("");
-
   const [vatRegime, setVatRegime] = useState("");
 
   const [itemId, setItemId] = useState("");
@@ -111,6 +102,7 @@ const Invoice = () => {
   const [totalExclVAT, setTotalExclVAT] = useState(0);
   const [vatAmount, setVatAmount] = useState(0);
   const [totalInclVAT, setTotalInclVAT] = useState(0);
+
   // Multiple items list
   const [invoiceItems, setInvoiceItems] = useState([]);
 
@@ -132,6 +124,28 @@ const Invoice = () => {
   const { token } = useAuth();
   const pdfRef = useRef();
 
+  // Fetch items from inventory
+  const fetchItems = async () => {
+    try {
+      setItemsLoading(true);
+      const res = await api.get("/inventory/items", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.data.success) {
+
+        setItemsList(res.data.data || []);
+      } else {
+        toast.error("Failed to fetch items");
+      }
+    } catch (error) {
+      console.error("Items fetch error:", error);
+      toast.error("Error fetching items");
+    } finally {
+      setItemsLoading(false);
+    }
+  };
+
   // Add item to array
   const handleAddItem = () => {
     if (!itemId || !quantity || !unitPrice) {
@@ -139,12 +153,15 @@ const Invoice = () => {
       return;
     }
 
+    const selectedItem = itemsList.find(item => item._id === itemId);
+
     const newItem = {
       itemId,
-      description,
+      description: description || selectedItem?.itemName || "Item",
       quantity: Number(quantity),
       unitPrice: Number(unitPrice),
-      vatRate: Number(vatRate) / 100, // convert 20 → 0.20
+      vatRegime: vatRegime,
+      vatRate: Number(vatRate) / 100, // Convert percentage to decimal (20% → 0.20)
       totalExclVAT,
       vatAmount,
       totalInclVAT,
@@ -174,13 +191,15 @@ const Invoice = () => {
       });
 
       if (res.data.success) {
+        console.log("Data ", res.data?.data);
+
         const allInvoices = res.data.data || [];
         setInvoiceData(allInvoices);
-        
-        // Split into draft and final invoices (you might need to adjust this logic based on your API response)
-        const drafts = allInvoices.filter(inv => inv.status === 'draft' || !inv.status);
-        const finals = allInvoices.filter(inv => inv.status === 'final');
-        
+
+        // Split into draft and final invoices
+        const drafts = allInvoices.filter(inv => inv.status === 'Draft' || !inv.status);
+        const finals = allInvoices.filter(inv => inv.status === "Final");
+
         setDraftInvoices(drafts);
         setFinalInvoices(finals);
         setSummary(res.data.summary || {});
@@ -217,7 +236,6 @@ const Invoice = () => {
   }, [invoiceData, isAddOpen, isEditMode]);
 
   // fetch customers
-
   const fetchCustomers = async () => {
     try {
       setCustomerLoading(true);
@@ -237,11 +255,14 @@ const Invoice = () => {
       setCustomerLoading(false);
     }
   };
+
   useEffect(() => {
-    if (isAddOpen) fetchCustomers();
+    if (isAddOpen) {
+      fetchCustomers();
+      fetchItems();
+    }
   }, [isAddOpen]);
 
-  // auto slect the regime and number of vat
   // Auto-fill VAT Number & VAT Regime on customer selection
   useEffect(() => {
     if (!selectedCustomer) return;
@@ -253,13 +274,71 @@ const Invoice = () => {
     }
   }, [selectedCustomer, customerList]);
 
+  const handleSaveInvoice = async () => {
+    if (!selectedCustomer) {
+      toast.error("Please select a customer");
+      return;
+    }
+
+    if (invoiceItems.length === 0) {
+      toast.error("Please add at least one item");
+      return;
+    }
+
+    try {
+      // Prepare the payload according to your API structure
+      const payload = {
+        status: status || "Draft", // or "Final" based on your requirement
+        companyCode: "VE", // You might want to make this dynamic
+        invoiceDate: invoiceDate,
+        customer: selectedCustomer,
+        items: invoiceItems.map(item => ({
+          itemId: item.itemId,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          vatRegime: vatRegime,
+          vatRate: item.vatRate
+        }))
+      };
+
+      console.log("Sending payload:", payload);
+
+      const response = await api.post("/inventory/invoice/draft", payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+
+      if (response.data.success) {
+        toast.success("Invoice saved successfully!");
+        setIsAddOpen(false);
+
+        // Reset form
+        setInvoiceItems([]);
+        setSelectedCustomer("");
+        setCustomerVAT("");
+        setVatRegime("");
+
+        // Refresh invoices list
+        fetchInvoices();
+      } else {
+        toast.error(response.data.message || "Failed to save invoice");
+      }
+    } catch (error) {
+      console.error("Error saving invoice:", error);
+      toast.error(error.response?.data?.message || "Error saving invoice");
+    }
+  };
+
   const filteredInvoice = invoiceData
     .map((inv) => ({
-      _id: inv._id, // ✅ include this
+      _id: inv._id,
       invoiceNo: inv.invoiceNo,
       date: new Date(inv.invoiceDate).toLocaleDateString(),
-      customerName: inv.customer?.customerName || inv.customerName, // ✅ fix
-      phoneNumber: inv.customer?.phoneNumber, // ✅ optional: add for WhatsApp
+      customerName: inv.customer?.customerName || inv.customerName,
+      phoneNumber: inv.customer?.phoneNumber,
       description: inv.items?.[0]?.description || "-",
       quantity: inv.items?.[0]?.quantity || 0,
       unit: inv?.items[0].unitPrice,
@@ -267,7 +346,7 @@ const Invoice = () => {
       totalExclVAT: inv.netTotal,
       vatAmount: inv.vatTotal,
       totalInclVAT: inv.grandTotal,
-      status: inv.status || 'draft' // Add status for filtering
+      status: inv.status || 'draft'
     }))
     .filter(
       (invoice) =>
@@ -335,7 +414,7 @@ const Invoice = () => {
     } else if (activeTab === "final") {
       invoicesToShow = filteredFinals;
     }
-    
+
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return invoicesToShow.slice(startIndex, endIndex);
@@ -350,11 +429,6 @@ const Invoice = () => {
 
   const currentInvoices = getCurrentInvoices();
 
-  const handleSaveInvoice = () => {
-    toast.success("Invoice saved successfully!");
-    setIsAddOpen(false);
-  };
-
   const handleDownload = async (item) => {
     try {
       if (!item || !item._id) {
@@ -364,7 +438,6 @@ const Invoice = () => {
 
       toast.loading("Downloading invoice...");
 
-      // ✅ call backend download endpoint
       const response = await api.get(
         `/inventory/invoice/${item._id}/download`,
         {
@@ -376,7 +449,6 @@ const Invoice = () => {
         }
       );
 
-      // ✅ create blob and link for browser download
       const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
 
@@ -397,19 +469,19 @@ const Invoice = () => {
       );
     }
   };
+
   const handleExportExcel = async () => {
     try {
       toast.loading("Exporting invoices to Excel...");
 
       const response = await api.get("/inventory/invoice/export/excel", {
-        responseType: "blob", // important for Excel file
+        responseType: "blob",
         headers: {
           Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.api+json", // ✅ added header
+          Accept: "application/vnd.api+json",
         },
       });
 
-      // ✅ create Excel file blob and trigger download
       const blob = new Blob([response.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
@@ -448,6 +520,7 @@ const Invoice = () => {
     setSelectedInvoice(invoice);
     setIsViewOpen(true);
   };
+
   const handleSendOption = async (type, invoice) => {
     if (!invoice) {
       toast.error("No invoice selected");
@@ -462,9 +535,8 @@ const Invoice = () => {
         const payload = {
           to: invoice.customer?.email || "emanali262770@gmail.com",
           subject: `Your Invoice ${invoice.invoiceNo} from VESTIAIRE ST. HONORÉ`,
-          message: `Hello ${
-            invoice.customer?.customerName || invoice.customerName || "Customer"
-          }, please find your invoice attached.`,
+          message: `Hello ${invoice.customer?.customerName || invoice.customerName || "Customer"
+            }, please find your invoice attached.`,
         };
 
         const response = await api.post(
@@ -486,12 +558,10 @@ const Invoice = () => {
     }
 
     if (type === "whatsapp") {
-      // ✅ handle both real and fallback phone
       const phone = invoice.phoneNumber || "03184486979";
 
       const msg = encodeURIComponent(
-        `Hello ${invoice.customerName || "Customer"}, your invoice ${
-          invoice.invoiceNo
+        `Hello ${invoice.customerName || "Customer"}, your invoice ${invoice.invoiceNo
         } is ready.`
       );
 
@@ -528,7 +598,7 @@ const Invoice = () => {
               <DialogTrigger
                 onClick={() => {
                   setIsEditMode(false);
-                  setInvoiceNo(""); // optional reset to re-trigger useEffect
+                  setInvoiceNo("");
                 }}
                 asChild
               >
@@ -548,13 +618,29 @@ const Invoice = () => {
                 <div className="space-y-6 pt-4">
                   {/* Invoice No & Date */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Invoice No</Label>
-                      <Input
-                        value={invoiceNo}
-                        readOnly
-                        className="border-2 bg-gray-100 cursor-not-allowed"
-                      />
+                    {/* // Add status selection to your form */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={status} onValueChange={setStatus}>
+                          <SelectTrigger className="border-2">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Draft">Draft</SelectItem>
+                            <SelectItem value="Final">Final</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Invoice No</Label>
+                        <Input
+                          value={status === "Final" ? invoiceNo : "INV-DRAFT"}
+                          readOnly
+                          className="border-2 bg-gray-100 cursor-not-allowed"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -621,21 +707,43 @@ const Invoice = () => {
                   <div className="mt-6 p-4 rounded-lg border bg-muted/30">
                     <h3 className="font-semibold mb-3">Add Item</h3>
 
-                    {/* Item */}
+                    {/* Item Selection */}
                     <div className="space-y-2">
                       <Label>Item</Label>
-                      <Select onValueChange={(v) => setItemId(v)}>
-                        <SelectTrigger className="border-2">
-                          <SelectValue placeholder="Select item" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="item001">
-                            Premium Vegetable Cooking Oil
-                          </SelectItem>
-                          <SelectItem value="item002">Office Chair</SelectItem>
-                          <SelectItem value="item003">Laptop Stand</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {itemsLoading ? (
+                        <div className="flex justify-center items-center h-10 border rounded-lg bg-muted/30">
+                          <Loader className="w-4 h-4 text-primary animate-spin mr-2" />
+                          Loading items...
+                        </div>
+                      ) : (
+                        <Select
+                          value={itemId}
+                          onValueChange={(value) => {
+                            setItemId(value);
+                            // Auto-fill description and unit price when item is selected
+                            const selectedItem = itemsList.find(item => item._id === value);
+                            if (selectedItem) {
+                              setDescription(selectedItem.description || selectedItem.itemName);
+                              setUnitPrice(selectedItem.sellingPrice || 0);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="border-2">
+                            <SelectValue placeholder="Select item" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {itemsList.length > 0 ? (
+                              itemsList.map((item) => (
+                                <SelectItem key={item._id} value={item._id}>
+                                  {item.itemCode} - {item.itemName}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem disabled>No items found</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
 
                     {/* Qty - Price - VAT Type */}
@@ -760,20 +868,30 @@ const Invoice = () => {
                               <th className="p-2 text-left">Item</th>
                               <th className="p-2 text-left">Qty</th>
                               <th className="p-2 text-left">Price</th>
+                              <th className="p-2 text-left">VAT Rate</th>
                               <th className="p-2 text-left">Total</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {invoiceItems.map((it, i) => (
-                              <tr key={i} className="border-t">
-                                <td className="p-2">{it.itemId}</td>
-                                <td className="p-2">{it.quantity}</td>
-                                <td className="p-2">€{it.unitPrice}</td>
-                                <td className="p-2 font-semibold">
-                                  €{it.totalInclVAT}
-                                </td>
-                              </tr>
-                            ))}
+                            {invoiceItems.map((it, i) => {
+                              const itemName = itemsList.find(item => item._id === it.itemId)?.itemName || it.itemId;
+                              return (
+                                <tr key={i} className="border-t">
+                                  <td className="p-2">{itemName}</td>
+                                  <td className="p-2">{it.quantity}</td>
+                                  <td className="p-2">€{it.unitPrice}</td>
+                                  <td className="p-2">{(it.vatRate * 100)}%</td>
+                                  <td className="p-2 font-semibold">€{it.totalInclVAT?.toFixed(2)}</td>
+                                </tr>
+                              );
+                            })}
+                            {/* Total Summary */}
+                            <tr className="border-t bg-gray-50 font-semibold">
+                              <td colSpan="4" className="p-2 text-right">Grand Total:</td>
+                              <td className="p-2">
+                                €{invoiceItems.reduce((sum, item) => sum + item.totalInclVAT, 0).toFixed(2)}
+                              </td>
+                            </tr>
                           </tbody>
                         </table>
                       </div>
