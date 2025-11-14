@@ -49,60 +49,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import api from "../../Api/AxiosInstance";
 
-const europeanCountries = [
-  "Albania",
-  "Andorra",
-  "Armenia",
-  "Austria",
-  "Azerbaijan",
-  "Belarus",
-  "Belgium",
-  "Bosnia and Herzegovina",
-  "Bulgaria",
-  "Croatia",
-  "Cyprus",
-  "Czech Republic (Czechia)",
-  "Denmark",
-  "Estonia",
-  "Finland",
-  "France",
-  "Georgia",
-  "Germany",
-  "Greece",
-  "Hungary",
-  "Iceland",
-  "Ireland",
-  "Italy",
-  "Kazakhstan (partly in Europe)",
-  "Kosovo",
-  "Latvia",
-  "Liechtenstein",
-  "Lithuania",
-  "Luxembourg",
-  "Malta",
-  "Moldova",
-  "Monaco",
-  "Montenegro",
-  "Netherlands",
-  "North Macedonia",
-  "Norway",
-  "Poland",
-  "Portugal",
-  "Romania",
-  "Russia (partly in Europe)",
-  "San Marino",
-  "Serbia",
-  "Slovakia",
-  "Slovenia",
-  "Spain",
-  "Sweden",
-  "Switzerland",
-  "Turkey (partly in Europe)",
-  "Ukraine",
-  "United Kingdom",
-  "Vatican City",
-];
-
 const CustomerDefinition = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -161,7 +107,8 @@ const CustomerDefinition = () => {
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
 
-  // Fetch Customer Data
+
+  // 🟢 Fetch Customer Data
   const fetchCustomerList = useCallback(async () => {
     try {
       setLoading(true);
@@ -182,12 +129,13 @@ const CustomerDefinition = () => {
           vatRegime: item.vatRegime || "-",
           defaultVatRate: item.defaultVatRate || "-",
           paymentTerms: item.paymentTerms || "-",
-          categoryId: item.categoryId || item.category || null,
+          categoryId: item.categoryId || item.category || null, // 👈 capture the category id
           createdAt: new Date(item.createdAt).toLocaleDateString(),
         }));
 
         setCustomerList(formattedData);
 
+        // ✅ Set summary values
         setSummary({
           totalCustomers: response.data.summary?.totalCustomers || 0,
           newCustomers: response.data.summary?.newCustomers || 0,
@@ -195,7 +143,7 @@ const CustomerDefinition = () => {
           customerLocations: response.data.summary?.customerLocations || 0,
         });
       } else {
-        console.warn("Warning: Unexpected API response structure:", response.data);
+        console.warn("⚠️ Unexpected API response structure:", response.data);
         setCustomerList([]);
         setSummary({
           totalCustomers: 0,
@@ -205,7 +153,7 @@ const CustomerDefinition = () => {
         });
       }
     } catch (error) {
-      console.error("Failed to fetch Customers:", error);
+      console.error("❌ Failed to fetch Customers:", error);
       setSummary({
         totalCustomers: 0,
         newCustomers: 0,
@@ -220,15 +168,17 @@ const CustomerDefinition = () => {
   useEffect(() => {
     fetchCustomerList();
   }, [fetchCustomerList]);
+  0;
 
   // Customer Code Increment
   useEffect(() => {
     if (customerList.length > 0) {
+      // Extract numbers from codes like "CUST001"
       const codes = customerList
         .map((c) => parseInt(c.customerCode?.replace(/\D/g, ""), 10))
         .filter((n) => !isNaN(n));
 
-      const maxCode = Math.max(...codes, 0);
+      const maxCode = Math.max(...codes, 0); // find the largest numeric part
       const nextCode = `CUST${String(maxCode + 1).padStart(3, "0")}`;
 
       setNewCustomer((prev) => ({
@@ -236,6 +186,7 @@ const CustomerDefinition = () => {
         customerCode: nextCode,
       }));
     } else {
+      // No customers yet → start with first code
       setNewCustomer((prev) => ({
         ...prev,
         customerCode: "CUST001",
@@ -243,7 +194,7 @@ const CustomerDefinition = () => {
     }
   }, [customerList]);
 
-  // Customer Form States
+  // Customer From States
   const [newCustomer, setNewCustomer] = useState({
     customerCode: "",
     customerName: "",
@@ -256,10 +207,10 @@ const CustomerDefinition = () => {
     vatRegime: "",
     defaultVatRate: "",
     paymentTerms: "",
-    categoryId: "",
+    categoryId: "", // ✅ Add this
   });
 
-  // Clear Form
+  // Clear From
   const clearForm = () => {
     setNewCustomer({
       customerCode: "",
@@ -273,7 +224,7 @@ const CustomerDefinition = () => {
       vatRegime: "",
       defaultVatRate: "",
       paymentTerms: "",
-      categoryId: "",
+      categoryId: "", // reset
     });
     setEditingCustomer(null);
   };
@@ -281,7 +232,7 @@ const CustomerDefinition = () => {
   // Handle Add Button
   const handleSaveCustomer = async () => {
     try {
-      setSaving(true);
+      setSaving(true); // start loader
       const payload = {
         customerCode: newCustomer.customerCode,
         customerName: newCustomer.customerName,
@@ -294,26 +245,34 @@ const CustomerDefinition = () => {
         vatRegime: newCustomer.vatRegime,
         defaultVatRate: newCustomer.defaultVatRate,
         paymentTerms: newCustomer.paymentTerms,
-        categoryId: newCustomer.categoryId || "",
+        categoryId: newCustomer.categoryId || "", // include category
       };
 
+      console.log(
+        "Saving customer payload (JSON):",
+        JSON.stringify(payload, null, 2)
+      );
+
       if (editingCustomer) {
+        // ✏️ Update existing customer
         await api.put(`/customers/${editingCustomer.id}`, payload);
         toast.success("Customer updated successfully!");
       } else {
+        // ➕ Add new customer
         await api.post("/customers", payload);
         toast.success("Customer added successfully!");
       }
 
+      // Close modal, reset form and refresh list
       setIsAddOpen(false);
       clearForm();
       setEditingCustomer(null);
       fetchCustomerList();
     } catch (error) {
-      console.error("Failed to save customer:", error);
+      console.error("❌ Failed to save customer:", error);
       toast.error("Failed to save customer");
     } finally {
-      setSaving(false);
+      setSaving(false); // stop loader
     }
   };
 
@@ -323,10 +282,11 @@ const CustomerDefinition = () => {
       const response = await api.delete(`/customers/${id}`);
       console.log("Delete response:", response.data);
       toast.success("Customer deleted successfully!");
+      // Remove deleted customer from list
       setCustomerList((prev) => prev.filter((c) => c.id !== id));
       fetchCustomerList();
     } catch (error) {
-      console.error("Failed to delete customer:", error.response || error);
+      console.error("❌ Failed to delete customer:", error.response || error);
       toast.error("Failed to delete customer");
     }
   };
@@ -351,8 +311,8 @@ const CustomerDefinition = () => {
       categoryId: customer.categoryId || "",
     });
 
-    setEditingCustomer(customer);
-    setIsAddOpen(true);
+    setEditingCustomer(customer); // mark as editing
+    setIsAddOpen(true); // open the modal
   };
 
   // Handle View
@@ -365,8 +325,10 @@ const CustomerDefinition = () => {
   const handleCustomizeOpen = (open) => {
     setIsCustomizeOpen(open);
     if (open) {
+      // Show the currently visible 6 fields as checked
       setTempVisibleFields([...visibleFields]);
     } else {
+      // Reset temporary state when dialog closes without applying
       setTempVisibleFields([]);
     }
   };
@@ -377,6 +339,7 @@ const CustomerDefinition = () => {
     toast.success("Display settings updated!");
   };
 
+
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentCustomers = filteredCustomers.slice(
@@ -384,9 +347,10 @@ const CustomerDefinition = () => {
     indexOfLastItem
   );
 
+  // Search Bar
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1);
+    setCurrentPage(1); // reset to page 1 on every new search
   };
 
   return (
@@ -423,7 +387,7 @@ const CustomerDefinition = () => {
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
                     <Plus className="w-5 h-5 text-primary" />
-                    {editingCustomer ? "Edit Customer" : "Add New Customer"}
+                    Add New Customer
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 pt-4">
@@ -438,7 +402,7 @@ const CustomerDefinition = () => {
                         placeholder="CUST001"
                         value={newCustomer.customerCode}
                         readOnly
-                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200x"
                       />
                     </div>
 
@@ -460,20 +424,20 @@ const CustomerDefinition = () => {
                       />
                     </div>
 
-                    {/* Phone Number */}
+                    {/* Contact Person */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium flex items-center gap-2">
-                        Phone Number
+                        Contact Person
                       </Label>
                       <Input
                         placeholder="Enter number"
-                        value={newCustomer.phoneNumber || ""}
+                        value={newCustomer.contactPerson}
                         onChange={(e) => {
                           const value = e.target.value;
-                          if (/^\d*$/.test(value)) {
+                          if (/^\d*$/.test(value)) { // only digits allowed
                             setNewCustomer({
                               ...newCustomer,
-                              phoneNumber: value,
+                              contactPerson: value,
                             });
                           }
                         }}
@@ -518,28 +482,22 @@ const CustomerDefinition = () => {
                       />
                     </div>
 
-                    {/* Country - NOW A DROPDOWN WITH 44 EUROPEAN COUNTRIES */}
+                    {/* Country */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium flex items-center gap-2">
                         Country
                       </Label>
-                      <Select
+                      <Input
+                        placeholder="Pakistan"
                         value={newCustomer.country}
-                        onValueChange={(value) =>
-                          setNewCustomer({ ...newCustomer, country: value })
+                        onChange={(e) =>
+                          setNewCustomer({
+                            ...newCustomer,
+                            country: e.target.value,
+                          })
                         }
-                      >
-                        <SelectTrigger className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
-                          <SelectValue placeholder="Select a country" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-60">
-                          {europeanCountries.map((country) => (
-                            <SelectItem key={country} value={country}>
-                              {country}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                      />
                     </div>
 
                     {/* VAT Number */}
@@ -626,12 +584,40 @@ const CustomerDefinition = () => {
                         className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                       />
                     </div>
+
+                    {/* Payment Terms */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        Payment Terms
+                      </Label>
+                      <Select
+                        value={newCustomer.paymentTerms}
+                        onValueChange={(value) =>
+                          setNewCustomer({
+                            ...newCustomer,
+                            paymentTerms: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select terms" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Net 30 days">
+                            Net 30 days
+                          </SelectItem>
+                          <SelectItem value="Due on receipt">
+                            Due on receipt
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <Button
                     className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium flex items-center justify-center gap-2"
                     onClick={handleSaveCustomer}
-                    disabled={saving}
+                    disabled={saving} // prevent double click
                   >
                     {saving && <Loader className="w-4 h-4 animate-spin" />}
                     {saving
@@ -732,7 +718,7 @@ const CustomerDefinition = () => {
                 placeholder="Search by customer name, contact, email, country..."
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50 bg-background/80 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                 value={searchTerm}
-                onChange={handleSearch}
+                onChange={handleSearch} // ✅ use the handler
               />
             </div>
           </CardContent>
@@ -778,9 +764,9 @@ const CustomerDefinition = () => {
                       Customer Name
                     </th>
                   )}
-                  {visibleFields.includes("phoneNumber") && (
+                  {visibleFields.includes("contactPerson") && (
                     <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                      Phone Number
+                      Contact Person
                     </th>
                   )}
                   {visibleFields.includes("email") && (
@@ -880,6 +866,7 @@ const CustomerDefinition = () => {
                       )}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
+                          {/* View */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -890,6 +877,7 @@ const CustomerDefinition = () => {
                             <Eye className="w-4 h-4" />
                           </Button>
 
+                          {/* Edit */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -900,6 +888,7 @@ const CustomerDefinition = () => {
                             <Edit className="w-4 h-4" />
                           </Button>
 
+                          {/* Delete */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -916,6 +905,7 @@ const CustomerDefinition = () => {
                 </tbody>
               )}
             </table>
+            {/* Pagination Component */}
             {filteredCustomers.length > itemsPerPage && (
               <Pagination
                 currentPage={currentPage}
@@ -933,7 +923,7 @@ const CustomerDefinition = () => {
           <DialogHeader className="pb-3 border-b border-border/30">
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
-                Settings
+                ⚙️
               </span>
               Customize Display
             </DialogTitle>
@@ -952,7 +942,7 @@ const CustomerDefinition = () => {
             {[
               { key: "sr", label: "Sr" },
               { key: "customerName", label: "Customer Name" },
-              { key: "phoneNumber", label: "Phone Number" },
+              { key: "contactPerson", label: "Contact Person" },
               { key: "email", label: "Email" },
               { key: "country", label: "Country" },
               { key: "customerType", label: "Customer Type" },
@@ -982,7 +972,7 @@ const CustomerDefinition = () => {
                     });
                   }}
                   className="peer appearance-none w-5 h-5 border border-gray-300 dark:border-gray-700 rounded-md checked:bg-gradient-to-br checked:from-primary checked:to-primary/70 transition-all duration-200 flex items-center justify-center relative
-              after:content-['Check'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
+              after:content-['✓'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
                 />
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">
                   {label}
@@ -995,7 +985,7 @@ const CustomerDefinition = () => {
             className="w-full mt-2 py-3 bg-gradient-to-r from-primary via-primary/80 to-primary/70 text-white font-semibold rounded-xl shadow-lg hover:shadow-primary/40 hover:-translate-y-[1px] transition-all duration-300"
             onClick={handleApplyChanges}
           >
-            Apply Changes
+            ✨ Apply Changes
           </Button>
         </DialogContent>
       </Dialog>
