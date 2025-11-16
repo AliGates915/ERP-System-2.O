@@ -151,12 +151,20 @@ const ProductInfo = () => {
   useEffect(() => {
     if (!selectedCategory) return;
 
+    // Reset size ONLY in ADD mode
+    if (!isEditMode) {
+      setSelectedSize("");
+    }
+
     const cat = categories.find((c) => c.categoryName === selectedCategory);
-    if (cat && cat.sizes) {
-      setSizes(cat.sizes); // expects array like ["XL", "L", "M"]
+    if (cat && Array.isArray(cat.sizes)) {
+      setSizes(cat.sizes.map((s) => (typeof s === "string" ? s : s.size)));
+    } else {
+      setSizes([]);
     }
   }, [selectedCategory, categories]);
-  // console.log({categories});
+
+  console.log({ categories });
 
   const filteredProducts = products.filter(
     (item) =>
@@ -214,10 +222,6 @@ const ProductInfo = () => {
     // 🔥 Reset file input so re-upload works
     const fileInput = document.querySelector('input[type="file"]');
     if (fileInput) fileInput.value = "";
-  };
-
-  const handleDownload = () => {
-    toast.success("Product catalog downloaded!");
   };
 
   const handleAddProduct = async () => {
@@ -301,19 +305,17 @@ const ProductInfo = () => {
   };
 
   const handleEdit = (productId) => {
-    // find product to edit
     const productToEdit = products.find((p) => p.id === productId);
     if (!productToEdit) {
       toast.error("Product not found");
       return;
     }
+    console.log({ productToEdit });
 
-    // enable edit mode + open modal
     setIsEditMode(true);
     setEditProductId(productId);
     setIsAddOpen(true);
 
-    // ⭐ Set all form states
     setItemName(productToEdit.itemName || "");
     setSku(productToEdit.sku || "");
     setBarcode(productToEdit.barcode || "");
@@ -322,14 +324,15 @@ const ProductInfo = () => {
     setItemCode(productToEdit.itemCode || "");
     setImagePreview(productToEdit.image || null);
 
-    // if category has sizes, update the sizes array
+    // ⭐ FIXED SIZE LOGIC HERE
     const foundCat = categories.find(
       (c) => c.categoryName === productToEdit.category
     );
+
     if (foundCat && foundCat.sizes) {
-      setSizes(foundCat.sizes);
+      setSizes(foundCat.sizes.map((s) => (typeof s === "string" ? s : s.size)));
     } else {
-      setSizes([]); // fallback if no sizes
+      setSizes([]);
     }
   };
 
