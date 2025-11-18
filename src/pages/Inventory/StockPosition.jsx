@@ -166,7 +166,7 @@ const StockPosition = () => {
 
           <div className="w-[300px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search 
+              Search  
             </label>
             <input
               className="w-full p-2 border rounded-lg"
